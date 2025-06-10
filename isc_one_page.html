@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SailPoint One Page App</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .form-container, #mainApp {
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 18px;
+      margin: 6px 0;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    nav {
+      margin-top: 20px;
+    }
+    nav button {
+      margin-right: 10px;
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      font-family: monospace;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(255,255,255,0.8);
+      z-index: 2000;
+      font-size: 24px;
+      color: #333;
+      text-align: center;
+      padding-top: 20%;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #loadingOverlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+  #correlationModal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 3000;
+  }
+
+  .modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 1600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+  }
+
+  .close-button {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .close-modal-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .close-modal-btn:hover {
+    background-color: #0056b3;
+  }
+
+
+  .link-button {
+    background: none;
+    border: none;
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9em;
+  }
+
+  .link-button:hover {
+    background: unset;
+  }
+
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="form-container" id="loginForm">
+  <h2>Generate Token</h2>
+  <label>Tenant</label>
+  <input type="text" id="tenantInput" placeholder="ex: company-sb" />
+  <label>Domain</label>
+  <input type="text" id="domainInput" value="identitynow" />
+  <label>Client ID</label>
+  <input type="text" id="clientIdInput" />
+  <label>Client Secret</label>
+  <input type="password" id="clientSecretInput" />
+  <button onclick="generateToken()">Generate Token</button>
+  <textarea id="tokenResult" readonly></textarea>
+</div>
+
+
+
+<!-- Main App -->
+<div id="mainApp" style="display: none;">
+  <h2>Welcome to SailPoint One Page App</h2>
+  <div><strong>Tenant:</strong> <span id="tenantInfo"></span></div>
+  <div><strong>Domain:</strong> <span id="domainInfo"></span></div>
+  <button onclick="logout()" class="link-button">Change</button>
+
+  <nav>
+    <button onclick="showSection('sourcesSection')">Sources</button>
+    <button onclick="showSection('accessProfilesSection')">Access Profiles</button>
+    <button onclick="showSection('identityProfilesSection')">Identity Profiles</button>
+    <button onclick="showSection('rolesSection')">Roles</button>
+  </nav>
+
+  <div class="section" id="sourcesSection" style="display:none;">
+    <div id="sourceResults"></div>
+  </div>
+
+  <div class="section" id="accessProfilesSection" style="display:none;">
+    <div id="accessProfileResults"></div>
+  </div>
+
+  <div id="identityProfilesSection" style="display:none;">
+    <div id="identityProfileResults"></div>
+  </div>
+
+  <div id="rolesSection" style="display:none;">
+    <div id="rolesResults"></div>
+  </div>
+</div>
+
+
+
+<!-- Modal -->
+<div id="correlationModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="correlationModalTitle">Modal Title</h2>
+      <button class="close-modal-btn" onclick="closeCorrelationModal()">Close</button>
+    </div>
+    <div id="correlationModalContent">
+    </div>
+  </div>
+</div>
+
+<script>
+  async function generateToken() {
+    const tenant = document.getElementById("tenantInput").value.trim();
+    const domain = document.getElementById("domainInput").value.trim();
+    const clientId = document.getElementById("clientIdInput").value.trim();
+    const clientSecret = document.getElementById("clientSecretInput").value.trim();
+    const resultBox = document.getElementById("tokenResult");
+
+    if (!tenant || !domain || !clientId || !clientSecret) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    const url = `https://${tenant}.api.${domain}.com/oauth/token`;
+    const formData = new URLSearchParams();
+    formData.append("grant_type", "client_credentials");
+    formData.append("client_id", clientId);
+    formData.append("client_secret", clientSecret);
+
+    showLoading();
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString()
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.access_token) {
+        resultBox.value = "Error: " + JSON.stringify(data);
+        return;
+      }
+
+      const bearer = "Bearer " + data.access_token;
+      sessionStorage.setItem("sailpoint_token", bearer);
+      sessionStorage.setItem("sailpoint_tenant", tenant);
+      sessionStorage.setItem("sailpoint_domain", domain);
+
+      resultBox.value = "Token generated successfully!";
+      showMainApp();
+    } catch (err) {
+      resultBox.value = "Error: " + err;
+    } finally {
+      hideLoading();
+    }
+  }
+
+
+  function showMainApp() {
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    document.getElementById("tenantInfo").innerText = tenant;
+    document.getElementById("domainInfo").innerText = domain;
+
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("mainApp").style.display = "block";
+  }
+
+  async function loadSources() {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    const url = `https://${tenant}.api.${domain}.com/v3/sources`;
+
+    showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderSources(data);
+    } catch (err) {
+      document.getElementById("sourceResults").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+
+  function renderSources(sources) {
+    if (!Array.isArray(sources)) {
+      document.getElementById("sourceResults").innerHTML = "<p>No sources found.</p>";
+      return;
+    }
+
+    const rows = sources.map(s => `
+      <tr>
+        <td>${s.name || "-"}</td>
+        <td>${s.id || "-"}</td>
+        <td>${s.type || "-"}</td>
+        <td>${s.status?.type || "-"}</td>
+        <td>
+          <button onclick="openCorrelationModal('${s.id}', '${s.name}')">Correlation</button>
+          <button onclick="openSchemaModal('${s.id}', '${s.name}')">Account Schema</button>
+          <button onclick="openAttributeSyncModal('${s.id}', '${s.name}')">Attribute Sync</button>
+          <button onclick="openProvisioningPolicyModal('${s.id}', '${s.name}')">Provisioning Policy</button>
+        </td>
+      </tr>
+    `).join("");
+
+    document.getElementById("sourceResults").innerHTML = `
+      <h3>Sources</h3>
+      <table id="sourcesTable">
+        <thead>
+          <tr><th>Name</th><th>ID</th><th>Type</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('sourcesTable', 'sources.csv')">Export Sources</button>
+    `;
+  }
+
+  async function loadAccessProfiles() {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    const url = `https://${tenant}.api.${domain}.com/v3/access-profiles`;
+
+    showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderAccessProfiles(data);
+    } catch (err) {
+      document.getElementById("accessProfileResults").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+
+  function renderAccessProfiles(profiles) {
+    if (!Array.isArray(profiles)) {
+      document.getElementById("accessProfileResults").innerHTML = "<p>No access profiles found.</p>";
+      return;
+    }
+
+    const rows = profiles.map(p => `
+      <tr>
+        <td>${p.name || "-"}</td>
+        <td>${p.id || "-"}</td>
+        <td>${p.description || "-"}</td>
+        <td>${p.enabled ? "Yes" : "No"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("accessProfileResults").innerHTML = `
+      <h3>Access Profiles</h3>
+      <table id="accessProfilesTable">
+        <thead>
+          <tr><th>Name</th><th>ID</th><th>Description</th><th>Enabled</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('accessProfilesTable', 'access_profiles.csv')">Export Access Profiles</button>
+    `;
+  }
+
+
+  async function loadIdentityProfiles() {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    const url = `https://${tenant}.api.${domain}.com/beta/identity-profiles`;
+
+    showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderIdentityProfiles(data);
+    } catch (err) {
+      document.getElementById("identityProfileResults").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderIdentityProfiles(profiles) {
+    if (!Array.isArray(profiles) || profiles.length === 0) {
+      document.getElementById("identityProfileResults").innerHTML = "<p>No identity profiles found.</p>";
+      return;
+    }
+
+    const rows = profiles.map(p => `
+      <tr>
+        <td>${p.name || "-"}</td>
+        <td>${p.description || "-"}</td>
+        <td>${p.owner?.name || "-"}</td>
+        <td>${p.authoritativeSource?.name || "-"}</td>
+        <td>${p.priority}</td>
+        <td>${p.identityCount}</td>
+        <td>
+          <button onclick='showIdentityProfileDetails(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Mappings</button>
+          <button onclick='showLifecycleStates("${p.id}", "${p.name}")'>LCS</button>
+        </td>
+      </tr>
+    `).join("");
+
+    document.getElementById("identityProfileResults").innerHTML = `
+      <h3>Identity Profiles</h3>
+      <table id="identityProfilesTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Owner</th>
+            <th>Authoritative Source</th>
+            <th>Priority</th>
+            <th>Identity Count</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('identityProfilesTable', 'identity_profiles.csv')">Export Identity Profiles</button>
+    `;
+  }
+
+  function showIdentityProfileDetails(profile) {
+    const transforms = profile.identityAttributeConfig?.attributeTransforms || [];
+
+    const rows = transforms.map(t => {
+      const td = t.transformDefinition || {};
+      const attr = td.attributes || {};
+      const targetSource = attr.sourceName || attr.targetSource || "-";
+      const targetAttr = attr.attributeName || attr.name || "-";
+      const input = attr.input?.attributes || {};
+
+      return `
+        <tr>
+          <td>${t.identityAttributeName || "-"}</td>
+          <td>${td.type || "-"}</td>
+          <td>${attr.sourceName || input.sourceName || "-"}</td>
+          <td>${attr.attributeName || input.attributeName || "-"}</td>
+          <td>${attr.id || "-"}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const html = `
+      <table id="modalIdentityProfileDetailTable">
+        <thead>
+          <tr>
+            <th>identity_display</th>
+            <th>identity_attribute</th>
+            <th>source</th>
+            <th>attribute</th>
+            <th>transform</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('modalIdentityProfileDetailTable', 'identity_profile_details.csv')">Export Details</button>
+    `;
+
+    document.getElementById("correlationModalTitle").innerText = `Details for ${profile.name}`;
+    document.getElementById("correlationModalContent").innerHTML = html;
+    document.getElementById("correlationModal").style.display = "block";
+  }
+
+
+  async function showLifecycleStates(profileId, profileName) {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+    const url = `https://${tenant}.api.${domain}.com/v3/identity-profiles/${profileId}/lifecycle-states`;
+
+    showLoading();
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Lifecycle States - ${profileName}`;
+    document.getElementById("correlationModalContent").innerHTML = "<p>Loading lifecycle states...</p>";
+
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const states = await res.json();
+      renderLifecycleStates(states);
+    } catch (err) {
+      document.getElementById("correlationModalContent").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderLifecycleStates(states) {
+    if (!Array.isArray(states) || states.length === 0) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No lifecycle states found.</p>";
+      return;
+    }
+
+    const rows = states.map(s => `
+      <tr>
+        <td>${s.name || "-"}</td>
+        <td>${s.technicalName || "-"}</td>
+        <td>${s.identityState || "-"}</td>
+        <td>${s.enabled ? "Yes" : "No"}</td>
+        <td>${s.identityCount}</td>
+        <td>${s.accountActions?.map(a => a.action + (a.allSources ? " (All Sources)" : "")).join("<br>") || "-"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("correlationModalContent").innerHTML = `
+      <table id="modalLifecycleStatesTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Technical Name</th>
+            <th>Identity State</th>
+            <th>Enabled</th>
+            <th>Identity Count</th>
+            <th>Account Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('modalLifecycleStatesTable', 'identity_profile_lcs.csv')">Export Lifecycle States</button>
+    `;
+  }
+
+
+  async function loadRoles() {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    const url = `https://${tenant}.api.${domain}.com/v3/roles`;
+
+    showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderRoles(data);
+    } catch (err) {
+      document.getElementById("rolesResults").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+
+  function renderRoles(roles) {
+    console.log("Roles loaded:", roles); // Para ver no console
+
+    if (!Array.isArray(roles) || roles.length === 0) {
+      document.getElementById("rolesResults").innerHTML = "<p>No roles found.</p>";
+      return;
+    }
+
+    const rows = roles.map(role => `
+      <tr>
+        <td>${role.name || "-"}</td>
+        <td>${role.id || "-"}</td>
+        <td>${role.owner?.name || "-"}</td>
+        <td>${role.enabled ? "Yes" : "No"}</td>
+        <td>${role.requestable ? "Yes" : "No"}</td>
+        <td>
+          <button onclick="showRoleMembers('${role.id}', '${role.name.replace(/"/g, "&quot;")}')">Show Members</button>
+        </td>
+      </tr>
+    `).join("");
+
+    document.getElementById("rolesResults").innerHTML = `
+      <h3>Roles</h3>
+      <table id="rolesTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>ID</th>
+            <th>Owner</th>
+            <th>Enabled</th>
+            <th>Requestable</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('rolesTable', 'roles.csv')">Export Roles</button>
+    `;
+  }
+
+
+
+
+  function showRoleMembers(members, roleName) {
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Members of Role: ${roleName}`;
+
+    if (!Array.isArray(members) || members.length === 0) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No members found.</p>";
+      return;
+    }
+
+    const rows = members.map(m => `
+      <tr>
+        <td>${m.name || "-"}</td>
+        <td>${m.id || "-"}</td>
+        <td>${m.aliasName || "-"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("correlationModalContent").innerHTML = `
+      <table id="modalRoleMembersTable">
+        <thead>
+          <tr><th>Name</th><th>ID</th><th>Alias</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('modalRoleMembersTable', 'role_members.csv')">Export Members</button>
+    `;
+  }
+
+
+
+
+
+
+  async function openCorrelationModal(sourceId, sourceName) {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    const correlationUrl = `https://${tenant}.api.${domain}.com/beta/sources/${sourceId}/correlation-config`;
+    const schemaUrl = `https://${tenant}.api.${domain}.com/beta/sources/${sourceId}/schemas`;
+
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Correlation for ${sourceName}`;
+    document.getElementById("correlationModalContent").innerHTML = "<p>Loading...</p>";
+
+    // showLoading();
+    try {
+      const [correlationRes, schemaRes] = await Promise.all([
+        fetch(correlationUrl, { headers: { "Authorization": token } }),
+        fetch(schemaUrl, { headers: { "Authorization": token } })
+      ]);
+
+      if (!correlationRes.ok) throw new Error(`Correlation API Error: ${correlationRes.status}`);
+      if (!schemaRes.ok) throw new Error(`Schema API Error: ${schemaRes.status}`);
+
+      const correlationData = await correlationRes.json();
+      const schemas = await schemaRes.json();
+
+      const rules = correlationData.attributeAssignments || [];
+
+      const userSchema = schemas.find(s => s.nativeObjectType?.toLowerCase() === "user");
+      const displayAttr = userSchema?.displayAttribute;
+
+      if (displayAttr) {
+        rules.push({
+          property: displayAttr,
+          operation: "EQ",
+          value: "name",
+          ignoreCase: "",
+          sequence: "default"
+        });
+      }
+
+      renderCorrelationInModal({ attributeAssignments: rules });
+
+    } catch (err) {
+      document.getElementById("correlationModalContent").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      // hideLoading();
+    }
+  }
+
+
+
+
+  function renderCorrelationInModal(config) {
+    if (!Array.isArray(config.attributeAssignments)) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No correlation rules found.</p>";
+      return;
+    }
+
+    const rows = config.attributeAssignments.map(rule => `
+      <tr>
+        <td>${rule.property || "-"}</td>
+        <td>${rule.operation || "-"}</td>
+        <td>${rule.value || "-"}</td>
+        <td>${rule.ignoreCase ? "Yes" : "No"}</td>
+        <td>${rule.sequence || "-"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("correlationModalContent").innerHTML = `
+      <table id="modalAccountCorrelationTable">
+        <thead>
+          <tr>
+            <th>Account Attribute</th>
+            <th>Operation</th>
+            <th>Identity Attribute</th>
+            <th>Ignore Case</th>
+            <th>Sequence</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('modalAccountCorrelationTable', 'account_correlation.csv')">Export Account Correlation</button>
+    `;
+  }
+
+  function closeCorrelationModal() {
+    document.getElementById("correlationModal").style.display = "none";
+    document.getElementById("correlationModalContent").innerHTML = "";
+  }
+
+  function exportTable(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    let csv = [];
+    for (let row of table.rows) {
+      const rowData = Array.from(row.cells).map(cell =>
+        `"${cell.innerText.replace(/"/g, '""')}"`
+      ).join(',');
+      csv.push(rowData);
+    }
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+
+    if (token && tenant && domain) {
+      showMainApp();
+    }
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") {
+        const modal = document.getElementById("correlationModal");
+        if (modal.style.display === "block") {
+          closeCorrelationModal();
+        }
+      }
+    });
+
+  });
+
+  async function openSchemaModal(sourceId, sourceName) {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+    const url = `https://${tenant}.api.${domain}.com/beta/sources/${sourceId}/schemas`;
+
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Schema for ${sourceName}`;
+    document.getElementById("correlationModalContent").innerHTML = "<p>Loading schema...</p>";
+
+    // showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderSchemaInModal(data);
+    } catch (err) {
+      document.getElementById("correlationModalContent").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      // hideLoading();
+    }
+  }
+
+
+  function renderSchemaInModal(schemas) {
+    if (!Array.isArray(schemas)) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No schema found.</p>";
+      return;
+    }
+
+    let html = "";
+
+    for (const schema of schemas) {
+      const tableId = `schemaTable_${schema.nativeObjectType}`;
+      html += `<h4>${schema.nativeObjectType}</h4>`;
+      html += `
+        <table id="${tableId}">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Multi</th>
+              <th>Entitlement</th>
+              <th>Group</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${schema.attributes.map(attr => `
+              <tr>
+                <td>${attr.name || "-"}</td>
+                <td>${attr.type || "-"}</td>
+                <td>${attr.description || "-"}</td>
+                <td>${attr.isMulti ? "Yes" : "No"}</td>
+                <td>${attr.isEntitlement ? "Yes" : "No"}</td>
+                <td>${attr.isGroup ? "Yes" : "No"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+        <button onclick="exportTable('${tableId}', '${schema.nativeObjectType}_schema.csv')">Export ${schema.nativeObjectType} Schema</button>
+        <br /><br />
+      `;
+    }
+
+    document.getElementById("correlationModalContent").innerHTML = html;
+  }
+
+
+
+  async function openAttributeSyncModal(sourceId, sourceName) {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+    const url = `https://${tenant}.api.${domain}.com/beta/sources/${sourceId}/attribute-sync-config`;
+
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Attribute Sync for ${sourceName}`;
+    document.getElementById("correlationModalContent").innerHTML = "<p>Loading attribute sync config...</p>";
+
+    // showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderAttributeSyncModal(data.attributes);
+    } catch (err) {
+      document.getElementById("correlationModalContent").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      // hideLoading();
+    }
+  }
+
+
+  function renderAttributeSyncModal(attributes) {
+    if (!Array.isArray(attributes) || attributes.length === 0) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No attribute sync data found.</p>";
+      return;
+    }
+
+    const rows = attributes.map(attr => `
+      <tr>
+        <td>${attr.displayName || "-"}</td>
+        <td>${attr.name || "-"}</td>
+        <td>${attr.target || "-"}</td>
+        <td>${attr.enabled ? "Yes" : "No"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("correlationModalContent").innerHTML = `
+      <table id="modalAttributeSyncTable">
+        <thead>
+          <tr>
+            <th>identity_attribute (name)</th>
+            <th>identity_attribute (code)</th>
+            <th>target_attribute</th>
+            <th>Enabled</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button onclick="exportTable('modalAttributeSyncTable', 'attribute_sync.csv')">Export Attribute Sync</button>
+    `;
+  }
+
+
+  async function openProvisioningPolicyModal(sourceId, sourceName) {
+    const token = sessionStorage.getItem("sailpoint_token");
+    const tenant = sessionStorage.getItem("sailpoint_tenant");
+    const domain = sessionStorage.getItem("sailpoint_domain");
+    const url = `https://${tenant}.api.${domain}.com/beta/sources/${sourceId}/provisioning-policies`;
+
+    document.getElementById("correlationModal").style.display = "block";
+    document.getElementById("correlationModalTitle").innerText = `Provisioning Policy for ${sourceName}`;
+    document.getElementById("correlationModalContent").innerHTML = "<p>Loading provisioning policies...</p>";
+
+    showLoading();
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": token }
+      });
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      renderProvisioningPolicy(data);
+    } catch (err) {
+      document.getElementById("correlationModalContent").innerHTML = `<p style="color:red;">${err}</p>`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderProvisioningPolicy(policies) {
+    if (!Array.isArray(policies) || policies.length === 0) {
+      document.getElementById("correlationModalContent").innerHTML = "<p>No provisioning policy found.</p>";
+      return;
+    }
+
+    let html = "";
+    policies.forEach((policy, index) => {
+      const tableId = `policyTable_${index}`;
+      html += `<h4>${policy.name} (${policy.usageType})</h4>`;
+      html += `
+        <table id="${tableId}">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Required</th>
+              <th>Multi-Valued</th>
+              <th>Transform</th>
+              <th>Attributes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${policy.fields.map(field => `
+              <tr>
+                <td>${field.name || "-"}</td>
+                <td>${field.type || "-"}</td>
+                <td>${field.isRequired ? "Yes" : "No"}</td>
+                <td>${field.isMultiValued ? "Yes" : "No"}</td>
+                <td>${field.transform ? field.transform.type + 
+                  (field.transform.attributes?.name || field.transform.attributes?.value
+                    ? ` (${field.transform.attributes.name || field.transform.attributes.value})`
+                    : "") : "-"}</td>
+                <td>${Object.entries(field.attributes || {}).map(([k, v]) => `${k}: ${v}`).join("<br>") || "-"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+        <button onclick="exportTable('${tableId}', '${(policy.name || policy.usageType || 'policy').replace(/\s+/g, '_')}.csv')">
+          Export ${policy.name || policy.usageType}
+        </button>
+        <br /><br />
+      `;
+    });
+
+    document.getElementById("correlationModalContent").innerHTML = html;
+  }
+
+
+  function showLoading() {
+    document.getElementById("loadingOverlay").classList.add("active");
+  }
+
+  function hideLoading() {
+    document.getElementById("loadingOverlay").classList.remove("active");
+  }
+
+
+  function showSection(sectionId) {
+    const sections = ["sourcesSection", "accessProfilesSection", "identityProfilesSection", "rolesSection"];
+
+    for (const id of sections) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = (id === sectionId) ? "block" : "none";
+      }
+    }
+
+    if (sectionId === "sourcesSection") loadSources();
+    else if (sectionId === "accessProfilesSection") loadAccessProfiles();
+    else if (sectionId === "identityProfilesSection") loadIdentityProfiles();
+    else if (sectionId === "rolesSection") loadRoles();
+  }
+
+
+  function logout() {
+    sessionStorage.removeItem("sailpoint_token");
+    sessionStorage.removeItem("sailpoint_tenant");
+    sessionStorage.removeItem("sailpoint_domain");
+
+    document.getElementById("mainApp").style.display = "none";
+    document.getElementById("loginForm").style.display = "block";
+  }
+
+
+</script>
+
+<div id="loadingOverlay" style="
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background-color:rgba(0, 0, 0, 0.5);
+  z-index:2000;
+  font-size:24px;
+  color:#333;
+  text-align:center;
+  padding-top:20%;
+  font-weight:bold;
+">
+  Loading, please wait...
+</div>
+
+</body>
+</html>
