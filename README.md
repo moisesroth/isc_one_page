@@ -19,4 +19,4 @@ Designed for usability and extensibility, it's ideal for debugging, validation, 
 
 ## Online Demo
 
-Test it live: [https://isc-access-history.vercel.app/isc_one_page.html](https://isc-access-history.vercel.app/isc_one_page.html)
+Test it live: https://isc-one-page.vercel.app/isc_one_page.html
